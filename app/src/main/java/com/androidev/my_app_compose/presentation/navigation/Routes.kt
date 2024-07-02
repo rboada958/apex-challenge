@@ -1,12 +1,14 @@
 package com.androidev.my_app_compose.presentation.navigation
 
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.androidev.my_app_compose.presentation.screen.home.HomeScreen
 import com.androidev.my_app_compose.presentation.screen.character.CharacterScreen
+import com.androidev.my_app_compose.presentation.screen.home.HomeScreen
 import com.androidev.my_app_compose.presentation.screen.splash.SplashScreen
 
 const val splashNavigationRoute = "splash_route"
@@ -19,17 +21,33 @@ fun NavGraphBuilder.splashScreen(navController: NavController) {
     }
 }
 
-fun NavGraphBuilder.homeScreen(navController: NavController) {
+@OptIn(ExperimentalSharedTransitionApi::class)
+fun NavGraphBuilder.homeScreen(
+    navController: NavController,
+    sharedTransitionScope: SharedTransitionScope
+) {
     composable(route = homeNavigationRoute) {
-        HomeScreen(navController = navController)
+        HomeScreen(
+            navController = navController,
+            sharedTransitionScope = sharedTransitionScope,
+            animatedVisibilityScope = this@composable
+        )
     }
 }
 
-fun NavGraphBuilder.characterScreen(navController: NavController) {
+@OptIn(ExperimentalSharedTransitionApi::class)
+fun NavGraphBuilder.characterScreen(
+    navController: NavController,
+    sharedTransitionScope: SharedTransitionScope
+) {
     composable(
         route = "${characterNavigationRoute}/{id}",
         arguments = listOf(navArgument("id") { type = NavType.StringType })
     ) {
-        CharacterScreen(navController = navController)
+        CharacterScreen(
+            navController = navController,
+            sharedTransitionScope = sharedTransitionScope,
+            animatedVisibilityScope = this@composable
+        )
     }
 }

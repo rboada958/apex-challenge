@@ -1,6 +1,9 @@
 package com.androidev.my_app_compose.presentation.screen.home
 
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -47,17 +50,25 @@ import com.androidev.my_app_compose.domain.model.character.CharacterResponse
 import com.androidev.my_app_compose.domain.model.character.CharacterResultsItem
 import com.androidev.my_app_compose.presentation.navigation.characterNavigationRoute
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
-    Home(navController, viewModel)
+    Home(navController, sharedTransitionScope, animatedVisibilityScope, viewModel)
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
-fun Home(navController: NavController, viewModel: HomeViewModel) {
+fun Home(
+    navController: NavController,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
+    viewModel: HomeViewModel
+) {
 
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -96,7 +107,12 @@ fun Home(navController: NavController, viewModel: HomeViewModel) {
                         (state as UiState.Success<*>).response as CharacterResponse
                     val characterResponseList = characterResponse.results
                     characterResponseList?.let {
-                        CharacterCard(it, navController)
+                        CharacterCard(
+                            it,
+                            navController,
+                            sharedTransitionScope,
+                            animatedVisibilityScope
+                        )
                     }
                 }
             }
@@ -104,62 +120,74 @@ fun Home(navController: NavController, viewModel: HomeViewModel) {
     }
 }
 
-@OptIn(ExperimentalCoilApi::class)
+@OptIn(ExperimentalCoilApi::class, ExperimentalSharedTransitionApi::class)
 @Composable
-fun CharacterCard(resultsItem: List<CharacterResultsItem?>, navController: NavController) {
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.Center,
-        contentPadding = PaddingValues(start = 16.dp, top = 35.dp, bottom = 48.dp)
-    ) {
-        items(resultsItem.size) { index ->
-            val item = resultsItem[index]
-            if (item != null) {
-                val image = item.image
-                Column(
-                    modifier = Modifier
-                        .padding(end = 20.dp)
-                        .fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Card(
+fun CharacterCard(
+    resultsItem: List<CharacterResultsItem?>,
+    navController: NavController,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope
+) {
+    with(sharedTransitionScope) {
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.Center,
+            contentPadding = PaddingValues(start = 16.dp, top = 35.dp, bottom = 48.dp)
+        ) {
+            items(resultsItem.size) { index ->
+                val item = resultsItem[index]
+                if (item != null) {
+                    val image = item.image
+                    Column(
                         modifier = Modifier
-                            .size(width = 160.dp, height = 140.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable {
-                                val id = index + 1
-                                navController.navigate("$characterNavigationRoute/$id")
-                            },
-                        colors = CardDefaults.cardColors(
-                            containerColor = Color(0xFFD9D9D9)
-                        )
+                            .padding(end = 20.dp)
+                            .fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
                     ) {
-                        Box(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentAlignment = Alignment.Center,
+                        Card(
+                            modifier = Modifier
+                                .size(width = 160.dp, height = 140.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable {
+                                    val id = index + 1
+                                    navController.navigate("$characterNavigationRoute/$id")
+                                },
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color(0xFFD9D9D9)
+                            )
                         ) {
-                            Image(
-                                painter = rememberImagePainter(image),
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .fillMaxWidth(),
-                                contentScale = ContentScale.Crop
+                            Box(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Image(
+                                    painter = rememberImagePainter(image),
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .fillMaxWidth()
+                                        .sharedElement(
+                                            rememberSharedContentState(key = "image-${item.id}"),
+                                            animatedVisibilityScope
+                                        )
+                                        .clip(RoundedCornerShape(12.dp)),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        item.name?.let {
+                            Text(
+                                text = it.capitalizeFirstLetter(),
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight(700),
+                                modifier = Modifier.padding(bottom = 18.dp),
+                                lineHeight = 18.sp,
+                                color = Color.White
                             )
                         }
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    item.name?.let {
-                        Text(
-                            text = it.capitalizeFirstLetter(),
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight(700),
-                            modifier = Modifier.padding(bottom = 18.dp),
-                            lineHeight = 18.sp,
-                            color = Color.White
-                        )
                     }
                 }
             }

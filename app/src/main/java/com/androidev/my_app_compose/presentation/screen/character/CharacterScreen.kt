@@ -1,6 +1,9 @@
 package com.androidev.my_app_compose.presentation.screen.character
 
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -37,7 +40,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -48,21 +50,29 @@ import coil.compose.rememberImagePainter
 import com.androidev.my_app_compose.core.commons.Extensions.capitalizeFirstLetter
 import com.androidev.my_app_compose.core.commons.UiState
 import com.androidev.my_app_compose.domain.model.character.CharacterResultsItem
-import com.androidev.my_app_compose.presentation.theme.MyappcomposeTheme
 import kotlin.random.Random
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun CharacterScreen(
     navController: NavController,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
     viewModel: CharacterViewModel = hiltViewModel()
 ) {
     val id = navController.currentBackStackEntry?.arguments?.getString("id") ?: ""
-    Character(viewModel, id, navController)
+    Character(viewModel, id, navController, sharedTransitionScope, animatedVisibilityScope)
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
-fun Character(viewModel: CharacterViewModel, id: String, navController: NavController) {
+fun Character(
+    viewModel: CharacterViewModel,
+    id: String,
+    navController: NavController,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
+) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
@@ -115,16 +125,24 @@ fun Character(viewModel: CharacterViewModel, id: String, navController: NavContr
                 is UiState.Success<*> -> {
                     val characterResponse =
                         (state as UiState.Success<*>).response as CharacterResultsItem
-                    CharacterDetails(characterResponse)
+                    CharacterDetails(
+                        characterResponse,
+                        sharedTransitionScope,
+                        animatedVisibilityScope
+                    )
                 }
             }
         }
     }
 }
 
-@OptIn(ExperimentalCoilApi::class)
+@OptIn(ExperimentalCoilApi::class, ExperimentalSharedTransitionApi::class)
 @Composable
-fun CharacterDetails(characterResponse: CharacterResultsItem) {
+fun CharacterDetails(
+    characterResponse: CharacterResultsItem,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope
+) {
     val gender = characterResponse.gender
     val status = characterResponse.status
     val species = characterResponse.species
@@ -135,187 +153,193 @@ fun CharacterDetails(characterResponse: CharacterResultsItem) {
     val name = characterResponse.name
     val uid = characterResponse.id
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 32.dp)
-            .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Top,
-    ) {
-        Spacer(modifier = Modifier.padding(8.dp))
-        name?.let {
-            Text(
-                text = "${it.capitalizeFirstLetter()} - N.º 000$uid",
-                fontSize = 24.sp,
-                color = Color.White
-            )
-        }
-        Spacer(modifier = Modifier.padding(16.dp))
-        Image(
-            painter = rememberImagePainter(image),
-            contentDescription = null,
-            modifier = Modifier
-                .height(300.dp)
-                .fillMaxWidth(),
-            contentScale = ContentScale.Crop
-        )
-        Spacer(modifier = Modifier.padding(16.dp))
-        Row(
+    with(sharedTransitionScope) {
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxSize()
-                .padding(bottom = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceAround
+                .padding(horizontal = 32.dp)
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Top,
         ) {
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(8.dp)
-            ) {
-                Card(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .height(60.dp)
-                        .fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = randomColor()
-                    )
-                ) {
-                    Text(
-                        text = "Status",
-                        color = Color.White,
-                        modifier = Modifier.padding(horizontal = 8.dp)
-                    )
-                    status?.let {
-                        Text(
-                            text = it.capitalizeFirstLetter(),
-                            color = Color.White,
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.padding(4.dp))
-                Card(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .height(60.dp)
-                        .fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = randomColor()
-                    )
-                ) {
-                    Text(
-                        text = "Species",
-                        color = Color.White,
-                        modifier = Modifier.padding(horizontal = 8.dp)
-                    )
-                    species?.let {
-                        Text(
-                            text = it.capitalizeFirstLetter(),
-                            color = Color.White,
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.padding(4.dp))
-                Card(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .height(60.dp)
-                        .fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = randomColor()
-                    )
-                ) {
-                    Text(
-                        text = "Gender",
-                        color = Color.White,
-                        modifier = Modifier.padding(horizontal = 8.dp)
-                    )
-                    gender?.let {
-                        Text(
-                            text = it.capitalizeFirstLetter(),
-                            color = Color.White,
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
-                    }
-                }
+            Spacer(modifier = Modifier.padding(8.dp))
+            name?.let {
+                Text(
+                    text = "${it.capitalizeFirstLetter()} - N.º 000$uid",
+                    fontSize = 24.sp,
+                    color = Color.White
+                )
             }
-            Column(
+            Spacer(modifier = Modifier.padding(16.dp))
+            Image(
+                painter = rememberImagePainter(image),
+                contentDescription = null,
                 modifier = Modifier
-                    .weight(1f)
-                    .padding(8.dp)
+                    .height(300.dp)
+                    .fillMaxWidth()
+                    .sharedElement(
+                        rememberSharedContentState(key = "image-${characterResponse.id}"),
+                        animatedVisibilityScope
+                    ),
+                contentScale = ContentScale.Crop
+            )
+            Spacer(modifier = Modifier.padding(16.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxSize()
+                    .padding(bottom = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceAround
             ) {
-                Card(
+                Column(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .height(60.dp)
-                        .fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = randomColor()
-                    )
+                        .weight(1f)
+                        .padding(8.dp)
                 ) {
-                    Text(
-                        text = "Origin",
-                        color = Color.White,
-                        modifier = Modifier.padding(horizontal = 8.dp)
-                    )
-                    origin?.let {
-                        Text(
-                            text = it.capitalizeFirstLetter(),
-                            color = Color.White,
-                            modifier = Modifier.padding(horizontal = 8.dp),
-                            overflow = TextOverflow.Ellipsis
+                    Card(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .height(60.dp)
+                            .fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = randomColor()
                         )
-                    }
-                }
-                Spacer(modifier = Modifier.padding(4.dp))
-                Card(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .height(60.dp)
-                        .fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = randomColor()
-                    )
-                ) {
-                    Text(
-                        text = "Location",
-                        color = Color.White,
-                        modifier = Modifier.padding(horizontal = 8.dp)
-                    )
-                    location?.let {
+                    ) {
                         Text(
-                            text = it.capitalizeFirstLetter(),
-                            color = Color.White,
-                            modifier = Modifier.padding(horizontal = 8.dp),
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.padding(4.dp))
-                Card(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .height(60.dp)
-                        .fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = randomColor()
-                    )
-                ) {
-                    Text(
-                        text = "Episodes",
-                        color = Color.White,
-                        modifier = Modifier.padding(horizontal = 8.dp)
-                    )
-                    episodes?.let {
-                        Text(
-                            text = "$it",
+                            text = "Status",
                             color = Color.White,
                             modifier = Modifier.padding(horizontal = 8.dp)
                         )
+                        status?.let {
+                            Text(
+                                text = it.capitalizeFirstLetter(),
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 8.dp)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.padding(4.dp))
+                    Card(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .height(60.dp)
+                            .fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = randomColor()
+                        )
+                    ) {
+                        Text(
+                            text = "Species",
+                            color = Color.White,
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        )
+                        species?.let {
+                            Text(
+                                text = it.capitalizeFirstLetter(),
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 8.dp)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.padding(4.dp))
+                    Card(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .height(60.dp)
+                            .fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = randomColor()
+                        )
+                    ) {
+                        Text(
+                            text = "Gender",
+                            color = Color.White,
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        )
+                        gender?.let {
+                            Text(
+                                text = it.capitalizeFirstLetter(),
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 8.dp)
+                            )
+                        }
+                    }
+                }
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(8.dp)
+                ) {
+                    Card(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .height(60.dp)
+                            .fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = randomColor()
+                        )
+                    ) {
+                        Text(
+                            text = "Origin",
+                            color = Color.White,
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        )
+                        origin?.let {
+                            Text(
+                                text = it.capitalizeFirstLetter(),
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 8.dp),
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.padding(4.dp))
+                    Card(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .height(60.dp)
+                            .fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = randomColor()
+                        )
+                    ) {
+                        Text(
+                            text = "Location",
+                            color = Color.White,
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        )
+                        location?.let {
+                            Text(
+                                text = it.capitalizeFirstLetter(),
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 8.dp),
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.padding(4.dp))
+                    Card(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .height(60.dp)
+                            .fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = randomColor()
+                        )
+                    ) {
+                        Text(
+                            text = "Episodes",
+                            color = Color.White,
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        )
+                        episodes?.let {
+                            Text(
+                                text = "$it",
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 8.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -330,13 +354,4 @@ fun randomColor(): Color {
         blue = Random.nextFloat(),
         alpha = 1f
     )
-}
-
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun CharacterPreview() {
-    MyappcomposeTheme {
-        val characterResultsItem = CharacterResultsItem()
-        CharacterDetails(characterResultsItem)
-    }
 }
